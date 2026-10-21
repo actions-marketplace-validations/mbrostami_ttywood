@@ -1,0 +1,30 @@
+# Copy to .github/workflows/ttywood-demo.yml in your project.
+# On every release: clean-room check, then a recorded terminal demo of the
+# tool (human-paced typing in a real shell), cut into a README GIF and
+# committed with the badge and report via a pull request.
+name: ttywood demo
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      privileged:
+        description: "privileged container (FUSE, loop devices)"
+        default: "false"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mbrostami/ttywood@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: demo
+          privileged: ${{ github.event.inputs.privileged || 'false' }}

@@ -1,0 +1,74 @@
+# Hand-written web-app smoke test: filebrowser (Go single binary + web UI).
+# Exercises terminal + browser interleaving, login, clicks, typing, sfx.
+meta:
+  tool: filebrowser
+  repo: filebrowser/filebrowser
+  tagline: "a web file manager in a single binary"
+  terminal: {cols: 120, rows: 30}
+
+scenes:
+  - id: intro
+    narration: >
+      filebrowser gives you a web file manager for any folder on a server, in a
+      single binary. Let's grab it with the official install script and point
+      it at a folder with a few files in it.
+    commands:
+      - type: "curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash"
+        pre_pause: 1.2
+        post_pause: 1.5
+        wait_for: {prompt: true, timeout: 120}
+      - type: "mkdir -p ~/files && cd ~/files && printf 'hello\\n' > notes.txt && echo '{}' > config.json"
+        pre_pause: 0.8
+        post_pause: 0.8
+        wait_for: {prompt: true, timeout: 20}
+
+  - id: start
+    narration: >
+      Starting it is one command. It creates a database on first run and prints
+      the default admin credentials in the log, which we'll use in a second.
+    commands:
+      - type: "filebrowser -r ~/files -a 127.0.0.1 -p 8080 --noauth > ~/fb.log 2>&1 &"
+        pre_pause: 1.0
+        post_pause: 1.0
+        wait_for: {prompt: true, timeout: 20}
+      - type: "sleep 2 && tail -3 ~/fb.log"
+        pre_pause: 0.6
+        post_pause: 2.0
+        wait_for: {prompt: true, timeout: 30}
+
+  - id: browse
+    narration: >
+      Over in the browser, the folder shows up right away. Creating a folder
+      is two clicks and a name, and the new folder appears in the listing
+      immediately.
+    commands:
+      - web:
+          - {action: goto, url: "http://127.0.0.1:8080/files/", label: "open  localhost:8080"}
+          - {action: wait, text: "notes.txt"}
+          - {action: hover, target: "text:notes.txt", ms: 900}
+          - {action: click, target: "[aria-label='New folder']", label: "click  New folder"}
+          - {action: fill, target: "input", text: "reports"}
+          - {action: press, key: "Enter", label: "press  Enter"}
+          - {action: wait, text: "reports"}
+        pre_pause: 1.0
+        post_pause: 2.5
+
+  - id: verify
+    narration: >
+      Back in the terminal the folder is really there on disk. That's the whole
+      point: it is just your filesystem with a UI in front of it.
+    commands:
+      - type: "ls -la ~/files"
+        pre_pause: 1.0
+        post_pause: 2.5
+        wait_for: {prompt: true, timeout: 20}
+      - type: "kill %1"
+        pre_pause: 0.8
+        post_pause: 1.0
+        wait_for: {prompt: true, timeout: 20}
+
+  - id: outro
+    narration: >
+      Single binary, one command, and a usable file manager in under a minute.
+      Worth it for a home server or a quick way to hand someone a folder.
+    dwell: 5

@@ -1,0 +1,8 @@
+# only the recording ships; everything a render writes stays local
+*
+!.gitignore
+!README.md
+!candidate.json
+!screenplay.yaml
+!demo.cast
+!timeline.json

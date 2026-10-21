@@ -1,0 +1,92 @@
+# ttywood defaults. Every key can be overridden from a config file of your
+# own; later files win, key by key:
+#
+#   1. this file (shipped with the package)
+#   2. config files contributed by installed plugins
+#   3. ~/.config/ttywood/config.toml
+#   4. ./ttywood.toml in the current directory
+#   5. $TTYWOOD_CONFIG (one path, or several separated by ":")
+#
+# Relative paths in a config file are resolved against that file's directory.
+# `ttywood config` prints the merged result and where each file came from.
+
+[paths]
+# where episode directories (candidate.json, screenplay.yaml, renders) live;
+# $TTYWOOD_DEMOS overrides it
+episodes = "~/ttywood/episodes"
+# where `ttywood series` keeps its plans (series/<slug>/series.json)
+series = "~/ttywood/series"
+# extra directories searched for prompt files before the built-in ones; a file
+# with the same name as a built-in prompt (rehearse.md, metadata.md...)
+# replaces it
+prompts = []
+# directory with key*.wav samples for the key sounds; empty = synthesized
+sfx = ""
+# extra KEY=value files loaded into the environment at startup (a variable
+# already set in the shell wins)
+env_files = []
+
+[show]
+# How the LLM prompts describe what is being made, e.g.
+#   '"mytool weekly", a YouTube channel that demos new CLI tools'
+pitch = "a series of hands-on videos that demo developer tools in a real terminal"
+
+[brand]
+# Channel branding. With an empty name there is none anywhere: no welcome
+# card, no watermark, no channel name on thumbnails or Shorts.
+name = ""
+# how many leading characters of the name are drawn in the accent colour
+accent_chars = 0
+# one line under the name on the welcome card
+slogan = ""
+# small credit line on the final card
+author = ""
+# a PNG drawn on the welcome card, the watermark and the final card
+logo = ""
+# [left, top, right, bottom]: the part of the logo to draw; empty = all of it
+logo_crop = []
+
+[cards]
+final_title = "thanks for watching"
+final_subtitle = ""
+
+# Spoken over the title and closing cards in the voiced cut (--tts). Keys are
+# language codes; {tool} and {tagline} are filled in. Empty = nothing spoken.
+[narration.welcome]
+en = ""
+
+[narration.signoff]
+en = ""
+
+[fonts]
+# first existing file wins; a list so one config works on macOS and Linux
+ui = [
+    "/System/Library/Fonts/Helvetica.ttc",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+]
+mono = [
+    "/System/Library/Fonts/Menlo.ttc",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSansMono.ttf",
+    "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+    "/System/Library/Fonts/Monaco.ttf",
+]
+# a Nerd Font, for the GitHub mark on Shorts; skipped when none is installed
+icons = [
+    "~/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf",
+    "/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf",
+    "~/.local/share/fonts/JetBrainsMonoNerdFont-Regular.ttf",
+    "/usr/share/fonts/truetype/jetbrains-mono-nerd/JetBrainsMonoNerdFont-Regular.ttf",
+]
+
+[youtube]
+# appended to every uploaded description (episodes and Shorts), e.g. a line
+# pointing at your channel's site; empty = nothing added
+description_footer = ""
+
+[docker]
+# the episode image `ttywood build-image` builds and every container starts from
+image = "ttywood:latest"

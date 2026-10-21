@@ -1,0 +1,72 @@
+# Two-pane PoC: iperf3 server in the left pane, client in the right pane.
+meta:
+  tool: iperf3
+  repo: esnet/iperf
+  tagline: "a TCP/UDP bandwidth measurement tool"
+  terminal: {cols: 120, rows: 30}
+  short_scene: measure
+
+scenes:
+  - id: install
+    narration: >
+      iperf3 is the standard tool for measuring throughput between two machines.
+      It ships in every distro, so installing it is one apt call.
+    commands:
+      - type: "sudo apt-get install -y iperf3 > /dev/null && iperf3 --version | head -1"
+        pre_pause: 1.0
+        post_pause: 1.5
+        wait_for: {prompt: true, timeout: 180}
+
+  - id: server
+    narration: >
+      It needs two sides. The server just sits and listens, so we start it in
+      this pane and split the screen for the client.
+    commands:
+      - type: "iperf3 -s -p 5201"
+        pre_pause: 1.0
+        post_pause: 1.5
+        wait_for: {regex: "Server listening", timeout: 20}
+      - zellij: "new-pane -d right"
+        pre_pause: 0.8
+        post_pause: 1.0
+        wait_for: {prompt: true, timeout: 20}
+
+  - id: measure
+    narration: >
+      The client runs on the right and connects to the server on the left. Both
+      panes report the same transfer, one from each end, interval by interval.
+    commands:
+      - type: "iperf3 -c 127.0.0.1 -p 5201 -t 4"
+        pre_pause: 1.0
+        post_pause: 3.0
+        wait_for: {regex: "iperf Done", timeout: 60}
+      - type: "iperf3 -c 127.0.0.1 -p 5201 -t 3 -R"
+        pre_pause: 1.0
+        post_pause: 3.0
+        wait_for: {regex: "iperf Done", timeout: 60}
+
+  - id: cleanup
+    narration: >
+      Back to the server pane, stop it with control C, and we're done.
+    commands:
+      - zellij: "move-focus left"
+        pre_pause: 0.8
+        post_pause: 0.8
+      - keys: ["C-c"]
+        pre_pause: 0.5
+        post_pause: 1.5
+        wait_for: {prompt: true, timeout: 10}
+      - zellij: "move-focus right"
+        pre_pause: 0.5
+        post_pause: 0.5
+      - type: "exit"
+        pre_pause: 0.5
+        post_pause: 1.0
+        wait_for: {prompt: true, timeout: 10}
+
+verdict:
+  use_cases:
+    - "Checking real throughput between two hosts before blaming the app"
+    - "Comparing a VPN or tunnel against the raw link"
+    - "Verifying a new switch, cable or Wi-Fi setup"
+  bottom_line: "Boring, reliable, everywhere: the first thing to run when a network feels slow"

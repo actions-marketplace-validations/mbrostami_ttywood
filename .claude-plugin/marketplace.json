@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ttywood",
+  "description": "ttywood: real terminal demos, recorded and edited by agents",
+  "owner": { "name": "mbrostami" },
+  "plugins": [
+    {
+      "name": "ttywood",
+      "description": "Record a real terminal demo video of a CLI tool or of the project you are working on, with ttywood.",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/mbrostami/ttywood"
+    }
+  ]
+}

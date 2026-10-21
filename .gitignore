@@ -1,0 +1,29 @@
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# secrets: CLAUDE_CODE_OAUTH_TOKEN and API keys (see config.load_dotenv_files)
+.env
+.env.*
+
+# local config and everything the pipeline produces: episodes, series plans,
+# renders. Keep them outside the repo (paths.episodes, default ~/ttywood) or
+# in a private plugin; none of it belongs in the engine's history.
+ttywood.toml
+demos/
+episodes/
+series/
+site/
+targets/
+newsletters/
+*.cast
+*.mp4
+*.webm
+*.wav
+*.mp3
+!docs/assets/*

@@ -1,0 +1,228 @@
+name: "ttywood"
+description: >-
+  Clean-room check of your project (a fresh Ubuntu container follows your docs
+  like a new user and files a factual report) and, optionally, a recorded
+  terminal demo of it: README GIF, badge and report committed to .ttywood/.
+author: ttywood
+branding:
+  icon: terminal
+  color: purple
+
+inputs:
+  anthropic-api-key:
+    description: "Anthropic API key for the in-container Claude Code run (store it as a secret). Give this or claude-code-oauth-token"
+    required: false
+    default: ""
+  claude-code-oauth-token:
+    description: "Claude Code OAuth token from `claude setup-token` (store it as a secret), instead of an API key"
+    required: false
+    default: ""
+  mode:
+    description: "check = report + badge only (about 15 min); demo = check + rehearse + record + render a README GIF (30-60 min)"
+    required: false
+    default: "check"
+  repo:
+    description: "owner/name to check (default: this repository)"
+    required: false
+    default: ${{ github.repository }}
+  ref:
+    description: "Commit, tag or branch to check (default: the commit that triggered the workflow when checking this repository, else the default branch)"
+    required: false
+    default: ${{ github.sha }}
+  privileged:
+    description: "Run the container privileged (loop devices, FUSE, mount)"
+    required: false
+    default: "false"
+  docker:
+    description: "Start a Docker daemon inside the check container (implies privileged) so a docker-first install is followed as documented"
+    required: false
+    default: "false"
+  commit:
+    description: "Open a pull request that updates .ttywood/ (badge, report, GIF, README snippet)"
+    required: false
+    default: "true"
+  open-issue:
+    description: "Open an issue listing the findings when the verdict is fail"
+    required: false
+    default: "false"
+  fail-on:
+    description: "Fail the job when the verdict is at least this: fail | warn | never"
+    required: false
+    default: "never"
+  asset-dir:
+    description: "Directory inside the repository for the generated files"
+    required: false
+    default: ".ttywood"
+  image:
+    description: "Prebuilt ttywood container image to pull; empty builds it from the action's Dockerfile (cached)"
+    required: false
+    default: ""
+  report-url:
+    description: "Optional: POST report.json here when done (your own collector); empty sends nothing"
+    required: false
+    default: ""
+
+outputs:
+  verdict:
+    description: "pass | warn | fail"
+    value: ${{ steps.check.outputs.verdict }}
+  summary:
+    description: "One-line summary from the report"
+    value: ${{ steps.check.outputs.summary }}
+  findings:
+    description: "Number of findings"
+    value: ${{ steps.check.outputs.findings }}
+  report:
+    description: "Path of report.json in the workspace"
+    value: ${{ steps.check.outputs.report }}
+  pull-request:
+    description: "URL of the pull request opened, if any"
+    value: ${{ steps.pr.outputs.pull-request-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install ttywood and host tools
+      shell: bash
+      run: |
+        set -euo pipefail
+        # editable install of the action checkout itself
+        python -m pip install -q -e "${{ github.action_path }}"
+        sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+        if [ "${{ inputs.mode }}" = "demo" ]; then
+          # agg renders the terminal body; a static binary from its releases
+          ARCH=$(uname -m)   # x86_64 or aarch64, same names agg uses
+          sudo curl -fsSL "https://github.com/asciinema/agg/releases/latest/download/agg-${ARCH}-unknown-linux-gnu" \
+            -o /usr/local/bin/agg
+          sudo chmod +x /usr/local/bin/agg
+          agg --version
+        fi
+
+    - name: Container image
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n "${{ inputs.image }}" ]; then
+          docker pull "${{ inputs.image }}"
+          docker tag "${{ inputs.image }}" ttywood:latest
+        else
+          # cache the image layers between runs (the build is ~5 min cold)
+          docker buildx create --use --name ttywood-builder >/dev/null 2>&1 || true
+          docker buildx build --load -t ttywood:latest \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            "${{ github.action_path }}/ttywood/docker"
+        fi
+
+    - name: Clean-room check
+      id: check
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        TTYWOOD_DEMOS: ${{ runner.temp }}/ttywood-demos
+      run: |
+        set -euo pipefail
+        if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+          echo "::error::set anthropic-api-key or claude-code-oauth-token (as a repository secret)"; exit 1
+        fi
+        # an empty variable would still be passed into the container and shadow the other one
+        [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
+        [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || unset CLAUDE_CODE_OAUTH_TOKEN
+        NAME=$(basename "${{ inputs.repo }}" | tr 'A-Z' 'a-z')
+        EP="$TTYWOOD_DEMOS/$NAME"
+        mkdir -p "$TTYWOOD_DEMOS"
+        PRIV=""; [ "${{ inputs.privileged }}" = "true" ] && PRIV="--privileged"
+        [ "${{ inputs.docker }}" = "true" ] && PRIV="$PRIV --docker"
+        set +e
+        # the default ref is this workflow's commit, which only exists in this repository
+        REF="${{ inputs.ref }}"
+        if [ "${{ inputs.repo }}" != "${{ github.repository }}" ] && [ "$REF" = "${{ github.sha }}" ]; then REF=""; fi
+        ttywood check "${{ inputs.repo }}" --ref "$REF" --as "$NAME" $PRIV
+        RC=$?
+        set -e
+        if [ ! -f "$EP/report.json" ]; then
+          echo "::error::no report written; the end of check.log:"
+          tail -40 "$EP/check.log" 2>/dev/null || echo "(no check.log)"
+          exit 1
+        fi
+        if [ "${{ inputs.mode }}" = "demo" ]; then
+          ttywood run "$EP" --from rehearse --to render --no-music || echo "::warning::demo recording failed, shipping the check only"
+        fi
+        ttywood export "$EP" --to "$GITHUB_WORKSPACE/${{ inputs.asset-dir }}"
+        python - "$EP/report.json" >> "$GITHUB_OUTPUT" <<'EOF'
+        import json, sys
+        r = json.load(open(sys.argv[1]))
+        print(f"verdict={r['verdict']}")
+        print(f"summary={r['summary']}")
+        print(f"findings={len(r['findings'])}")
+        EOF
+        echo "report=${{ inputs.asset-dir }}/report.json" >> "$GITHUB_OUTPUT"
+        cat "$GITHUB_WORKSPACE/${{ inputs.asset-dir }}/report.md" >> "$GITHUB_STEP_SUMMARY"
+        echo "verdict: $(python -c "import json;print(json.load(open('$EP/report.json'))['verdict'])")"
+
+    - name: Upload artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ttywood-${{ inputs.mode }}
+        path: |
+          ${{ inputs.asset-dir }}
+          ${{ runner.temp }}/ttywood-demos/**/check.log
+          ${{ runner.temp }}/ttywood-demos/**/rehearse.log
+          ${{ runner.temp }}/ttywood-demos/**/final.mp4
+        if-no-files-found: ignore
+        retention-days: 14
+
+    - name: Send the report
+      if: inputs.report-url != ''
+      shell: bash
+      run: |
+        curl -fsS -X POST -H 'Content-Type: application/json' \
+          --data-binary @"${{ inputs.asset-dir }}/report.json" "${{ inputs.report-url }}" || echo "::warning::report upload failed"
+
+    - name: Pull request with the new assets
+      id: pr
+      if: inputs.commit == 'true'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        add-paths: ${{ inputs.asset-dir }}
+        branch: ttywood/update
+        delete-branch: true
+        commit-message: "ttywood: clean-room check ${{ steps.check.outputs.verdict }} (${{ steps.check.outputs.findings }} findings)"
+        title: "ttywood: ${{ steps.check.outputs.verdict }}, ${{ steps.check.outputs.summary }}"
+        body: |
+          A fresh Ubuntu container followed this project's docs like a new user.
+
+          **Verdict: ${{ steps.check.outputs.verdict }}.** ${{ steps.check.outputs.summary }}
+
+          This PR updates `${{ inputs.asset-dir }}/` (badge, report, README GIF when a demo was recorded).
+          To show it in the README, paste `${{ inputs.asset-dir }}/README-snippet.md` once; the files
+          under it keep updating on every run.
+
+          Generated by [ttywood](https://github.com/mbrostami/ttywood).
+
+    - name: Issue with the findings
+      if: inputs.open-issue == 'true' && steps.check.outputs.verdict == 'fail'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh issue create --repo "${{ github.repository }}" \
+          --title "Clean-room install failed: ${{ steps.check.outputs.summary }}" \
+          --body-file "${{ inputs.asset-dir }}/report.md" \
+          --label "ttywood" 2>/dev/null || gh issue create --repo "${{ github.repository }}" \
+          --title "Clean-room install failed: ${{ steps.check.outputs.summary }}" \
+          --body-file "${{ inputs.asset-dir }}/report.md"
+
+    - name: Gate
+      shell: bash
+      run: |
+        V="${{ steps.check.outputs.verdict }}"; ON="${{ inputs.fail-on }}"
+        if [ "$ON" = "fail" ] && [ "$V" = "fail" ]; then exit 1; fi
+        if [ "$ON" = "warn" ] && [ "$V" != "pass" ]; then exit 1; fi
+        echo "verdict $V (fail-on: $ON)"

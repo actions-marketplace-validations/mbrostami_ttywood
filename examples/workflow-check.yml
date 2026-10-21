@@ -1,0 +1,29 @@
+# Copy to .github/workflows/ttywood.yml in your project.
+# Every release (and on demand): a fresh container follows your README like a
+# new user, files report.md, updates the badge, opens a PR with the results.
+name: ttywood clean-room check
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"   # weekly, catches drift in dependencies and docs
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mbrostami/ttywood@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: check
+          open-issue: true       # a fail verdict files an issue with the findings
+          fail-on: never         # or: fail, to turn it into a real CI gate

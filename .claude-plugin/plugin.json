@@ -1,0 +1,10 @@
+{
+  "name": "ttywood",
+  "description": "Record a real terminal demo video of a CLI tool or of the project you are working on: a screenplay replayed with human typing in Docker, cut into a captioned video, a Short and YouTube metadata.",
+  "version": "0.2.0",
+  "author": { "name": "mbrostami" },
+  "homepage": "https://github.com/mbrostami/ttywood",
+  "repository": "https://github.com/mbrostami/ttywood",
+  "license": "MIT",
+  "keywords": ["video", "demo", "terminal", "asciinema", "screencast", "youtube"]
+}

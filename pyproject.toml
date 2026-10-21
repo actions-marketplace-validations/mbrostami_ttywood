@@ -1,0 +1,64 @@
+[project]
+name = "ttywood"
+version = "0.2.0"
+description = "Turn a CLI tool into a recorded, edited terminal video: an agent rehearses it in Docker, a fresh container replays it with human typing, and the cast is cut into a captioned video, a Short and YouTube metadata."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "mbrostami" }]
+requires-python = ">=3.10"
+keywords = ["asciinema", "terminal", "screencast", "demo", "video", "cli", "claude", "agents", "youtube"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Software Development :: Documentation",
+]
+dependencies = [
+    "click>=8.1",
+    "rich>=13.0",
+    "pydantic>=2.5",
+    "PyYAML>=6.0",
+    "requests>=2.31",
+    "Pillow>=10.1",
+    "numpy>=1.26",
+    "pyte>=0.8",
+    "google-api-python-client>=2.100",
+    "google-auth-oauthlib>=1.2",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/mbrostami/ttywood"
+Issues = "https://github.com/mbrostami/ttywood/issues"
+Examples = "https://www.youtube.com/@ttywood"
+
+[project.scripts]
+ttywood = "ttywood.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ttywood*"]
+
+[tool.setuptools.package-data]
+ttywood = ["defaults.toml", "prompts/*.md", "docker/Dockerfile", "docker/container/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82", "F401"]

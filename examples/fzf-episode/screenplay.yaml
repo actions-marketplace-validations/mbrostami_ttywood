@@ -1,0 +1,58 @@
+# A hand-written screenplay: clone + install fzf, use it non-interactively,
+# outro. No LLM involved, so it is the quickest way to check that the
+# record -> render path works on your machine (see README, "Check it works").
+meta:
+  tool: fzf
+  repo: junegunn/fzf
+  tagline: "a command-line fuzzy finder"
+  terminal: {cols: 120, rows: 30}
+
+scenes:
+  - id: intro
+    narration: >
+      Today we're looking at fzf, the command-line fuzzy finder, one of the
+      most starred CLI tools on GitHub. Let's start from absolutely nothing
+      and clone it.
+    commands:
+      - type: "git clone --depth 1 https://github.com/junegunn/fzf.git"
+        pre_pause: 1.2
+        post_pause: 1.5
+        wait_for: {prompt: true, timeout: 120}
+
+  - id: install
+    narration: >
+      Installation is a single script. We'll use the bin-only mode so it
+      doesn't touch our shell config — and notice it just downloads a
+      prebuilt binary, no compilation needed.
+    commands:
+      - type: "cd fzf && ./install --bin"
+        pre_pause: 1.0
+        post_pause: 2.0
+        wait_for: {regex: "Checking fzf executable \\.\\.\\. \\d", timeout: 300}
+      - type: "./bin/fzf --version"
+        pre_pause: 0.8
+        post_pause: 1.5
+        wait_for: {prompt: true, timeout: 30}
+
+  - id: filter
+    narration: >
+      The core of fzf is fuzzy matching. In filter mode you can see exactly
+      what the matcher does: given a list of fruits, the query "an" fuzzy
+      matches banana, mango and orange — any line containing those letters
+      in order.
+    commands:
+      - type: "printf 'apple\\nbanana\\ncherry\\nmango\\norange\\n' > fruits.txt"
+        pre_pause: 1.0
+        wait_for: {prompt: true, timeout: 30}
+      - type: "./bin/fzf --filter an < fruits.txt"
+        pre_pause: 1.0
+        post_pause: 2.5
+        wait_for: {prompt: true, timeout: 30}
+
+  - id: outro
+    narration: >
+      And that's the thirty-second tour. fzf earns its stars: one-script
+      install, instant startup, and it composes with everything on your
+      system.
+    dwell: 5
+    commands: []
