@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/ttywood-logo.svg" alt="ttywood" width="420">
+  <img src="https://raw.githubusercontent.com/mbrostami/ttywood/main/docs/assets/ttywood-logo.svg" alt="ttywood" width="420">
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="ttywood rendering a recorded episode into a video, a thumbnail and a Short" width="900">
+  <img src="https://raw.githubusercontent.com/mbrostami/ttywood/main/docs/assets/demo.gif" alt="ttywood rendering a recorded episode into a video, a thumbnail and a Short" width="900">
   <br><sub>Cut by <code>ttywood gif</code> from the episode in which ttywood films itself.</sub>
 </p>
 
