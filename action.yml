@@ -1,8 +1,5 @@
 name: "ttywood"
-description: >-
-  Clean-room check of your project (a fresh Ubuntu container follows your docs
-  like a new user and files a factual report) and, optionally, a recorded
-  terminal demo of it: README GIF, badge and report committed to .ttywood/.
+description: "Clean-room check of your install docs in a fresh container, with an optional recorded terminal demo GIF"
 author: ttywood
 branding:
   icon: terminal
