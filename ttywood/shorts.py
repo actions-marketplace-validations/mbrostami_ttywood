@@ -330,7 +330,7 @@ def render_short_body(episode_dir: Path, font_size: int = SHORT_FONT) -> tuple[P
     timeline, protected, waits = tl["scenes"], tl.get("protected", []), tl.get("waits", [])
     lines = (episode_dir / "short.cast").read_text().splitlines()
     header, events = lines[0], [json.loads(l) for l in lines[1:] if l.strip()]
-    fast = typing_spans([ev[0] for ev in events], protected, waits)
+    fast = typing_spans([ev[0] for ev in events], protected, waits, typed=tl.get("typed"))
     warp = TimeWarp(protected, waits, FAST_FACTOR, WAIT_MAX, IDLE_LIMIT, 1.0, fast)
     warp.build([ev[0] for ev in events])
     new_times = [warp.map(ev[0]) for ev in events]
