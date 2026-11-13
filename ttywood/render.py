@@ -132,13 +132,43 @@ def warp_typed(typed: list[dict], warp: "TimeWarp") -> list[dict]:
     return out
 
 
+def _multiline_spans(typed: list[dict], typing_max: float,
+                     keep: float) -> list[tuple[float, float, float]]:
+    """Fast-forward only commands typed over several lines (a heredoc, a
+    file): a one-liner of any length plays at 1x, so its key sounds never
+    stop and start again mid-command. The first line plays at 1x too; the
+    speed-up begins at the first line break, so the change of pace lands
+    where the viewer already sees a new line start."""
+    out = []
+    for e in typed:
+        text = (e.get("text") or "").rstrip("\n")
+        chars = e.get("chars") or []
+        if "\n" not in text or not chars:
+            continue
+        a, b = e["start"], chars[-1]  # the beat before Enter is protected
+        if b - a <= typing_max:
+            continue
+        ff = a + keep
+        if len(chars) >= len(text):
+            ff = max(ff, chars[text.index("\n")])
+        # a very long first line still leaves time for the rest to show
+        ff = min(ff, a + typing_max - 1.0)
+        out.append((ff, b, (typing_max - (ff - a)) / (b - ff)))
+    return out
+
+
 def typing_spans(event_times: list[float], protected: list[list[float]],
                  waits: list[list[float]], typing_max: float = TYPING_MAX,
-                 keep: float = TYPING_KEEP) -> list[tuple[float, float, float]]:
-    """Long stretches of typing (dense cast events outside pauses and waits,
-    e.g. a file typed through a heredoc) are boring to watch: keep the first
-    `keep` seconds at 1x and fast-forward the rest so the whole command shows
-    in `typing_max` seconds. Returns (start, end, scale) intervals."""
+                 keep: float = TYPING_KEEP,
+                 typed: list[dict] | None = None) -> list[tuple[float, float, float]]:
+    """Long typing is boring to watch: fast-forward it so the whole command
+    shows in about `typing_max` seconds. Returns (start, end, scale)
+    intervals. With the recorder's typed log, only multiline commands are
+    sped up (see _multiline_spans). Older recordings have no typed log: any
+    dense run of cast events outside pauses and waits keeps its first `keep`
+    seconds at 1x and the rest is fast-forwarded."""
+    if typed:
+        return _multiline_spans(typed, typing_max, keep)
     busy = sorted([tuple(p) for p in protected] + [tuple(w) for w in waits])
     inside = lambda t: any(a <= t < b for a, b in busy)
     spans: list[tuple[float, float, int]] = []
@@ -275,7 +305,7 @@ def render_episode(episode_dir: Path, font_size: int = 20,
                 waits.append([prev, ev[0]])
             prev = ev[0]
 
-    fast = typing_spans([ev[0] for ev in events], protected, waits)
+    fast = typing_spans([ev[0] for ev in events], protected, waits, typed=typed)
     warp = TimeWarp(protected, waits, fast_factor, wait_max, idle_limit, pause_scale, fast)
     warp.build([ev[0] for ev in events])
     new_times = [warp.map(ev[0]) for ev in events]
